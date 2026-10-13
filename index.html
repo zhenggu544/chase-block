@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>第七场·追身大帽</title><style>html,body{margin:0;background:#111;height:100%;overflow:hidden;touch-action:none}canvas{display:block;margin:0 auto}</style></head><body>
+<canvas id="c" width="400" height="700"></canvas>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+function fit(){const s=Math.min(innerWidth/400,innerHeight/700);c.style.width=400*s+'px';c.style.height=700*s+'px'}fit();onresize=fit;
+let st={mode:'title',t:0};
+function reset(){st={mode:'run',t:0,z:0,gap:1,charge:0,hold:false,shot:null,msg:'',win:false,move:'tiao'}}
+function hitBtn(e){if(!e||st.mode!=='run')return false;const r=c.getBoundingClientRect(),px=(e.clientX-r.left)*400/r.width,py=(e.clientY-r.top)*700/r.height;
+ if(py<618||py>660)return false;for(const [k,bx] of BTN)if(px>bx&&px<bx+110){st.move=k;return true}return false}
+function down(e){if(hitBtn(e))return;if(st.mode==='title'){reset();return}if(st.mode==='end'){if(!st.win)reset();return}
+ if(st.mode==='run'&&st.z>0.55)st.hold=true}
+function up(){if(st.mode==='run'&&st.hold){st.hold=false;shoot()}}
+c.addEventListener('pointerdown',down);c.addEventListener('pointerup',up);
+addEventListener('keydown',e=>{if(st.mode==='run'){if(e.key==='1')st.move='tiao';if(e.key==='2')st.move='la';if(e.key==='3')st.move='ban'}if(e.code==='Space'&&!e.repeat)down()});addEventListener('keyup',e=>{if(e.code==='Space')up()});
+const MOVES={tiao:{n:'挑篮',A:.5,B:.78,blk:.15},la:{n:'拉杆',A:.56,B:.7,blk:.05},ban:{n:'打板',A:.42,B:.86,blk:.3}};
+const BTN=[['tiao',20],['la',145],['ban',270]];
+function mv(){return MOVES[st.move||'tiao']}
+function shoot(){const m=mv(),p=st.charge,ok=p>m.A&&p<m.B,blocked=st.gap<m.blk;st.mode='shot';st.shot={k:0,ok:ok&&!blocked,blocked,move:st.move}}
+function upd(dt){st.t+=dt;
+ if(st.mode==='run'){if(!st.hold)st.z=Math.min(0.92,st.z+dt*0.32);st.gap-=dt*0.3;
+  if(st.hold)st.charge=Math.min(1,st.charge+dt*1.4);
+  if(st.gap<=0.02){st.mode='shot';st.shot={k:0,ok:false,blocked:true}}}
+ else if(st.mode==='shot'){st.shot.k+=dt*1.5;if(st.shot.blocked)st.gap=Math.max(0,st.gap-dt);
+  if(st.shot.k>=1){st.mode='end';st.win=st.shot.ok;st.msg=st.win?'进了！改写历史！':st.shot.blocked?'被追身大帽钉板！':'出手偏了'}}}
+function face(fx,fy,r){x.lineWidth=4;x.strokeStyle='#111';x.fillStyle='#7a4a2a';x.beginPath();x.arc(fx,fy,r,0,7);x.fill();x.stroke();
+ x.fillStyle='#fff';x.fillRect(fx-r,fy-r*.62,r*2,r*.3);x.strokeRect(fx-r,fy-r*.62,r*2,r*.3);
+ x.beginPath();x.ellipse(fx-r*.35,fy-r*.08,r*.22,r*.26,0,0,7);x.ellipse(fx+r*.35,fy-r*.08,r*.22,r*.26,0,0,7);x.fill();x.stroke();
+ x.fillStyle='#111';x.beginPath();x.arc(fx-r*.42,fy-r*.08,r*.1,0,7);x.arc(fx+r*.28,fy-r*.08,r*.1,0,7);x.fill();
+ x.beginPath();x.moveTo(fx-r*.65,fy-r*.42);x.lineTo(fx-r*.1,fy-r*.28);x.moveTo(fx+r*.65,fy-r*.42);x.lineTo(fx+r*.1,fy-r*.28);x.stroke();
+ x.beginPath();x.ellipse(fx,fy+r*.55,r*.55,r*.3,0,0,Math.PI);x.fill();
+ x.fillStyle='#fff';x.beginPath();x.ellipse(fx,fy+r*.38,r*.25,r*.12,0,0,7);x.fill();x.stroke()}
+function hand(hx,hy,s,col){x.lineWidth=4;x.strokeStyle='#111';x.fillStyle=col||'#7a4a2a';x.beginPath();x.roundRect(hx-s*.5,hy-s*.6,s,s*1.2,s*.35);x.fill();x.stroke()}
+function limb(pts,w){x.lineCap='round';x.lineJoin='round';x.strokeStyle='#111';x.lineWidth=w+8;x.beginPath();pts.forEach((q,j)=>j?x.lineTo(q[0],q[1]):x.moveTo(q[0],q[1]));x.stroke();
+ x.strokeStyle='#7a4a2a';x.lineWidth=w;x.stroke();x.lineCap='butt'}
+function palm(hx,hy,s,ang){x.save();x.translate(hx,hy);x.rotate(ang);x.fillStyle='#7a4a2a';x.strokeStyle='#111';x.lineWidth=4;
+ for(let f=-2;f<=2;f++){x.save();x.rotate(f*0.28);x.beginPath();x.roundRect(-s*.09,-s*1.05,s*.18,s*.6,s*.09);x.fill();x.stroke();x.restore()}
+ x.beginPath();x.ellipse(0,-s*.25,s*.42,s*.45,0,0,7);x.fill();x.stroke();x.restore()}
+function arm(sx,sy,hx,hy,w,bend,s,ang){const mx=(sx+hx)/2+bend,my=(sy+hy)/2+Math.abs(bend)*.3;
+ x.fillStyle='#6f263d';x.strokeStyle='#111';x.lineWidth=4;x.beginPath();x.arc(sx,sy,w*.75,0,7);x.fill();x.stroke(); // shoulder in jersey
+ limb([[sx,sy],[mx,my],[hx,hy]],w);x.strokeStyle='#fff';x.lineWidth=w*.5;x.beginPath();x.moveTo(mx+(hx-mx)*.6,my+(hy-my)*.6);x.lineTo(mx+(hx-mx)*.75,my+(hy-my)*.75);x.stroke(); // wristband
+ palm(hx,hy,s,ang)}
+function bubble(bx,by,txt,col){x.font='bold 24px sans-serif';const w=x.measureText(txt).width+26;x.fillStyle='#fff';x.strokeStyle='#111';x.lineWidth=3;
+ x.beginPath();x.roundRect(bx-w/2,by-22,w,38,16);x.fill();x.stroke();x.fillStyle=col;x.textAlign='center';x.fillText(txt,bx,by+6)}
+function closeup(){const k=Math.min(1,st.shot.k),sh=st.shot,MV=sh.move||'tiao',J=Math.sin(Math.min(1,k*1.25)*Math.PI);
+ // whole-body motion: jump lifts the eye line (world drops), lean tilts the view
+ const LIFT={tiao:70,la:45,ban:95}[MV]*J,tilt={tiao:0,la:0.16*Math.sin(Math.min(1,k*1.6)*Math.PI),ban:-0.1*J}[MV];
+ x.fillStyle='#1a1a2e';x.fillRect(0,0,400,700);x.save();x.translate(200,400);x.rotate(tilt);x.translate(-200,-400+LIFT);
+ x.fillStyle='#1a1a2e';x.fillRect(0,0,400,700);
+ for(let i=0;i<40;i++){x.fillStyle=i%2?'#fdb927':'#1d428a';x.globalAlpha=.3;x.beginPath();x.arc((i*61)%400,(i*89)%700,8,0,7);x.fill()}x.globalAlpha=1;
+ // zoom lines
+ x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=2;for(let i=0;i<24;i++){const a=i/24*6.28;x.beginPath();x.moveTo(200+Math.cos(a)*160,230+Math.sin(a)*160);x.lineTo(200+Math.cos(a)*420,230+Math.sin(a)*420);x.stroke()}
+ // big backboard + hoop
+ x.fillStyle='#fff';x.strokeStyle='#111';x.lineWidth=4;x.fillRect(60,40,280,170);x.strokeRect(60,40,280,170);x.strokeStyle='#e33';x.strokeRect(150,110,100,70);
+ const hy=200;x.lineWidth=6;x.beginPath();x.ellipse(200,hy,70,18,0,0,7);x.stroke();
+ x.strokeStyle='#fff';x.lineWidth=2;for(let i=-4;i<=4;i++){x.beginPath();x.moveTo(200+i*16,hy+8);x.lineTo(200+i*10,hy+90);x.stroke()}
+ // 23 jumps from the left: torso + head + both arms stretched up to cover hoop sides
+ const lift=Math.sin(Math.min(1,k*1.4)*Math.PI*.5)*60,close=sh.blocked?Math.min(1,Math.max(0,k-.45)*3)*45:0;
+ x.fillStyle='#6f263d';x.strokeStyle='#111';x.lineWidth=4;x.beginPath();x.roundRect(-40,400-lift,170,400,30);x.fill();x.stroke();
+ x.fillStyle='#fff';x.font='bold 54px sans-serif';x.textAlign='center';x.fillText('23',45,500-lift);
+ const sL=[30,410-lift],sR=[115,415-lift];
+ // far (left) hand covers hoop left side, near hand reaches across to hoop right side
+ arm(sL[0],sL[1],200-105+close,hy-40-lift*.2,30,-30,70,-0.25);
+ face(70,345-lift,62);
+ arm(sR[0],sR[1],200+105-close,hy-45-lift*.2,34,40,74,0.25);
+ // 9's shooting arm: pose depends on move (first-person, from bottom-right shoulder)
+ const mvk=sh.move||'tiao',SH=[330,760],L=(a,b,t)=>a+(b-a)*t,e=t=>t*t*(3-2*t);let hx,hy2,ang,elb;
+ const t=Math.min(1,k/.5);
+ if(mvk==='tiao'){hx=L(310,255,e(t));hy2=L(600,330,e(t));ang=-0.15+(k>.5?-0.5*Math.min(1,(k-.5)*4):0);elb=20}            // 挑篮: arm straight up, wrist flicks over at the top
+ else if(mvk==='la'){if(t<.45){const r=e(t/.45);hx=L(300,340,r);hy2=L(560,650,r);ang=1.3}                                 // 拉杆: pull ball down to the hip, away from the block
+  else{const r=e((t-.45)/.55);hx=L(340,250,r);hy2=L(650,350,r);ang=L(1.3,-0.2,r)}elb=60}                                 //        then scoop up and under
+ else{hx=L(310,280,e(t));hy2=L(600,300,e(t));ang=-0.55;elb=10}                                                           // 打板: reach high, palm angled toward the glass
+ x.lineCap='round';x.strokeStyle='#111';x.lineWidth=72;x.beginPath();x.moveTo(SH[0],SH[1]);x.lineTo((SH[0]+hx)/2+elb,(SH[1]+hy2)/2);x.stroke();
+ x.strokeStyle='#1d428a';x.lineWidth=64;x.stroke();x.lineCap='butt'; // blue sleeve
+ limb([[(SH[0]+hx)/2+elb,(SH[1]+hy2)/2],[hx,hy2]],42);palm(hx,hy2,80,ang);
+ // ball rides the hand until release
+ let bx=hx-Math.sin(ang)*60,by=hy2-Math.cos(ang)*60;const rx=bx,ry=by;
+ if(k>.5){const q=(k-.5)/.5;
+  if(mvk==='ban'){if(q<.6){const r=q/.6;bx=L(rx,220,r);by=L(ry,130,r)}else{const r=(q-.6)/.4;bx=220-r*20;by=130+r*(hy-130)}}
+  else if(mvk==='la'){bx=L(rx,200,q);by=L(ry,hy,q)-Math.sin(q*Math.PI)*30}
+  else{bx=L(rx,200,q);by=L(ry,hy,q)-Math.sin(q*Math.PI)*60}
+  if(sh.blocked&&q>.4){bx=200+(q-.4)*400;by=hy-20+(q-.4)*200}else if(!sh.ok&&q>.7){bx+=(q-.7)*200}}
+ x.fillStyle='#e8732a';x.lineWidth=4;x.beginPath();x.arc(bx,by,44,0,7);x.fill();x.stroke();x.beginPath();x.moveTo(bx-44,by);x.lineTo(bx+44,by);x.moveTo(bx,by-44);x.lineTo(bx,by+44);x.stroke();
+ x.restore();
+ // my own body in first person: knee drive, off-arm, all per move
+ x.lineCap='round';
+ // off-arm (left): 挑篮 balance out wide, 拉杆 forearm shield up against 23, 打板 guard arm bent in front
+ let ox,oy,eb;if(MV==='tiao'){ox=40-J*30;oy=560-J*60;eb=[60,650]}
+ else if(MV==='la'){ox=120+J*10;oy=430-J*40;eb=[50,560]}
+ else{ox=150;oy=470-J*50;eb=[70,620]}
+ x.strokeStyle='#111';x.lineWidth=56;x.beginPath();x.moveTo(20,800);x.lineTo(eb[0],eb[1]);x.stroke();x.strokeStyle='#1d428a';x.lineWidth=48;x.stroke();
+ x.lineCap='butt';limb([[eb[0],eb[1]],[ox,oy]],38);palm(ox,oy,70,MV==='la'?-0.6:MV==='tiao'?-1.3:0.3);
+ x.fillStyle='rgba(0,0,0,.6)';x.fillRect(0,0,400,40);x.fillStyle='#fff';x.font='16px sans-serif';x.textAlign='left';x.fillText('蓝金 89 : 89 酒红   1:50',10,26);
+ bubble(300,600,MOVES[sh.move||'tiao'].n+'！','#1d428a');if(sh.blocked&&k>.6)bubble(200,330,'啪！钉板！','#c00');if(sh.ok&&k>.9)bubble(200,330,'唰！','#1d428a')}
+function draw(){if(st.mode==='shot'||(st.mode==='end'&&st.shot)){closeup();if(st.mode==='end')endcard();return}const z=st.z||0,bob=st.mode==='run'?Math.sin(st.t*16)*6:0;
+ // stands + crowd
+ x.fillStyle='#1a1a2e';x.fillRect(0,0,400,700);
+ for(let i=0;i<60;i++){x.fillStyle=i%3?'#fdb927':'#1d428a';x.globalAlpha=.35;x.beginPath();x.arc((i*37)%400,60+((i*53)%180)+bob*.3,6,0,7);x.fill()}x.globalAlpha=1;
+ // floor in perspective
+ const hz=270+bob;x.fillStyle='#d49a5a';x.beginPath();x.moveTo(0,700);x.lineTo(400,700);x.lineTo(320-(1-z)*140,hz);x.lineTo(80-(1-z)*140,hz);x.fill();
+ x.strokeStyle='rgba(255,255,255,.8)';x.lineWidth=3;const kw=60+z*160;x.beginPath();x.moveTo(200-kw,700);x.lineTo(200-kw*.35-(1-z)*140,hz);x.moveTo(200+kw,700);x.lineTo(200+kw*.35-(1-z)*140,hz);x.stroke();
+ if(st.mode==='run'){x.strokeStyle='rgba(255,255,255,.5)';x.lineWidth=2;for(let i=0;i<12;i++){const a=i/12*6.28,r0=120+(st.t*500+i*40)%200;x.beginPath();x.moveTo(200+Math.cos(a)*r0,300+Math.sin(a)*r0);x.lineTo(200+Math.cos(a)*(r0+50),300+Math.sin(a)*(r0+50));x.stroke()}}
+ // backboard + hoop: attacking from right wing, hoop sits left and slides to center as you close in
+ const hxo=-(1-z)*140;x.save();x.translate(hxo,0);const sc=0.35+z*1.6,hy=hz-90*sc;x.fillStyle='#fff';x.strokeStyle='#111';x.lineWidth=3;x.fillRect(200-70*sc,hy-60*sc,140*sc,90*sc);x.strokeRect(200-70*sc,hy-60*sc,140*sc,90*sc);
+ x.strokeStyle='#e33';x.strokeRect(200-25*sc,hy-25*sc,50*sc,35*sc);x.lineWidth=4;x.beginPath();x.ellipse(200,hy+10*sc,28*sc,8*sc,0,0,7);x.stroke();
+ x.strokeStyle='#fff';x.lineWidth=1.5;for(let i=-3;i<=3;i++){x.beginPath();x.moveTo(200+i*9*sc,hy+12*sc);x.lineTo(200+i*6*sc,hy+45*sc);x.stroke()}x.restore();
+ // HUD
+ x.fillStyle='rgba(0,0,0,.6)';x.fillRect(0,0,400,40);x.fillStyle='#fff';x.font='16px sans-serif';x.textAlign='left';x.fillText('蓝金 89 : 89 酒红   1:50',10,26);
+ if(st.mode==='title'){face(100,560,90);hand(310,640,70,'#7a4a2a');x.fillStyle='rgba(0,0,0,.75)';x.fillRect(30,300,340,190);x.fillStyle='#fdb927';x.textAlign='center';x.font='bold 28px sans-serif';x.fillText('第七场·追身大帽',200,345);
+  x.fillStyle='#fff';x.font='16px sans-serif';['你就是9号，从右侧快攻冲向篮筐','23号会从左后方追上来','下方选挑篮/拉杆/打板，按住空白处蓄力','点击开始'].forEach((s,i)=>x.fillText(s,200,385+i*26));return}
+ // defender coming from right edge
+ const g=st.gap,dr=40+(1-g)*120,dx=-70+(1-g)*230,dy=560-(1-g)*200;
+ if(g<0.85){face(dx,dy,dr);if(g<0.4){const r=(0.4-g)/0.4;arm(dx+dr*.6,dy+dr*.9,dx+dr*(0.9+r*.9),dy-dr*(0.4+r*1.2),dr*.32,dr*.3,dr*.8,0.5+r*.3)}}
+ // ball + my hands
+ if(st.mode==='shot'){const k=Math.min(1,st.shot.k);let bx=200+(0)*k,by=600-(600-hy-10*sc)*k-Math.sin(k*Math.PI)*120,br=34-k*22;
+  if(st.shot.blocked&&k>.35){bx=200-(k-.35)*500;by=420+(k-.35)*300}else if(!st.shot.ok&&k>.8)bx+= (k-.8)*250;
+  x.fillStyle='#e8732a';x.strokeStyle='#111';x.lineWidth=3;x.beginPath();x.arc(bx,by,br,0,7);x.fill();x.stroke();hand(130,690,60);hand(270,690,60)}
+ else{const by=610+bob-(st.hold?st.charge*40:0);x.fillStyle='#e8732a';x.strokeStyle='#111';x.lineWidth=3;x.beginPath();x.arc(200,by,40,0,7);x.fill();x.stroke();
+  x.beginPath();x.moveTo(160,by);x.lineTo(240,by);x.moveTo(200,by-40);x.lineTo(200,by+40);x.stroke();hand(150,by+20,60);hand(250,by+20,60)}
+ if(st.mode==='run'){for(const [k,bx] of BTN){const on=st.move===k;x.fillStyle=on?'#fdb927':'rgba(0,0,0,.6)';x.strokeStyle='#111';x.lineWidth=3;x.beginPath();x.roundRect(bx,620,110,38,12);x.fill();x.stroke();x.fillStyle=on?'#111':'#fff';x.font='bold 18px sans-serif';x.textAlign='center';x.fillText(MOVES[k].n,bx+55,645)}}
+ if(st.mode==='run'&&g<0.5)bubble(150,130,'我来了！','#c00');
+ if(st.mode==='run'&&st.z>0.55){x.fillStyle='#fff';x.font='bold 18px sans-serif';x.textAlign='center';if(!st.hold)x.fillText('按住空白处蓄力！',200,520);
+  const w=300,y0=670;x.fillStyle='#333';x.fillRect(50,y0,w,14);const m=mv();x.fillStyle='#2c2';x.fillRect(50+m.A*w,y0,(m.B-m.A)*w,14);x.fillStyle='#fff';x.fillRect(50+st.charge*w-2,y0-4,4,22)}
+ if(st.mode==='shot'&&st.shot.blocked)bubble(200,200,'啪！钉板！','#c00');
+ if(st.mode==='shot'&&st.shot.ok&&st.shot.k>.85)bubble(200,170,'唰！','#1d428a');
+}
+function endcard(){{x.fillStyle='rgba(0,0,0,.75)';x.fillRect(30,280,340,150);x.textAlign='center';x.fillStyle=st.win?'#fdb927':'#f66';x.font='bold 26px sans-serif';x.fillText(st.msg,200,330);
+  x.fillStyle='#fff';x.font='16px sans-serif';x.fillText(st.win?'总冠军到手，游戏结束':'差一点就改写历史了',200,370);if(!st.win)x.fillText('点击再来一次',200,405)}}
+let last=performance.now();(function loop(n){upd(Math.min(.05,(n-last)/1000));last=n;draw();requestAnimationFrame(loop)})(last);
+</script></body></html>
